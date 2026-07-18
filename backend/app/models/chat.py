@@ -1,10 +1,8 @@
 import uuid
-from app.db.base import Base
-from sqlalchemy import ForeignKey
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.mixins import TimestampMixin
@@ -14,23 +12,23 @@ class Chat(Base, TimestampMixin):
     __tablename__ = "chats"
 
     id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
 
     title: Mapped[str] = mapped_column(
         String(255),
+        default="New Chat",
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
-    user = relationship(
-        "User",
-        back_populates="chats",
-    )
-
+    user = relationship("User", back_populates="chats")
     messages = relationship(
         "Message",
         back_populates="chat",

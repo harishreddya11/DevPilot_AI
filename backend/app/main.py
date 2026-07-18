@@ -6,6 +6,9 @@ from app.core.config import get_settings
 from app.api.v1.auth import router as auth_router
 from app.core.logging import setup_logging
 from app.core.middleware import log_requests
+from app.api.v1.users import router as users_router
+from app.api.v1.chats import router as chats_router
+from app.api.v1.messages import router as messages_router
 # Load application settings
 settings = get_settings()
 
@@ -30,12 +33,27 @@ app.include_router(
     prefix="/api/v1",
 )
 
+
+
 app.include_router(
     auth_router,
     prefix="/api/v1",
 )
 
+app.include_router(
+    users_router, 
+    prefix="/api/v1"
+)
 
+app.include_router(
+    chats_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    messages_router,
+    prefix="/api/v1",
+)
 @app.get("/", tags=["Root"])
 def root():
     """

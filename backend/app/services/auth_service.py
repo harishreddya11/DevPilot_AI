@@ -1,63 +1,73 @@
 from sqlalchemy.orm import Session
-from app.core.exceptions import ConflictError
+
 from app.core.security import (
     create_access_token,
     hash_password,
     verify_password,
 )
-from app.repositories.user_repository import UserRepository
+from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
-)
-from app.core.exceptions import (
-    AuthenticationError,
-    ConflictError,
+    UserResponse,
 )
 
 
 class AuthService:
-
     def __init__(self, db: Session):
-        self.users = UserRepository(db)
+        self.db = db
 
-    def register(
-        self,
-        request: RegisterRequest,
-    ):
+    def register(self, request: RegisterRequest) -> UserResponse:
+        """
+        Register a new user.
+        """
 
-        existing = self.users.get_by_email(request.email)
+        existing_user = (
+            self.db.query(User)
+            .filter(User.email == request.email)
+            .first()
+        )
 
-        if existing:
-           raise ConflictError("Email already exists")
+        if existing_user:
+            raise ValueError("Email already registered")
 
-        user = self.users.create(
+        user = User(
             full_name=request.full_name,
             email=request.email,
             hashed_password=hash_password(request.password),
         )
 
-        return user
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
 
-    def login(
-        self,
-        request: LoginRequest,
-    ) -> TokenResponse:
+        return UserResponse.model_validate(user)
 
-        user = self.users.get_by_email(request.email)
+    def login(self, request: LoginRequest) -> TokenResponse:
+        """
+        Authenticate a user.
+        """
+
+        user = (
+            self.db.query(User)
+            .filter(User.email == request.email)
+            .first()
+        )
 
         if not user:
-            raise AuthenticationError("Invalid credentials")
+            raise ValueError("Invalid email or password")
 
         if not verify_password(
             request.password,
             user.hashed_password,
         ):
-           raise AuthenticationError("Invalid credentials")
+            raise ValueError("Invalid email or password")
 
-        token = create_access_token(str(user.id))
+        access_token = create_access_token(
+            subject=str(user.id),
+        )
 
         return TokenResponse(
-            access_token=token,
+            access_token=access_token,
         )

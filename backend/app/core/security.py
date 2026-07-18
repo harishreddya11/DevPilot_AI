@@ -1,42 +1,47 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
-from jose import jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-)
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
+    """
+    Hash a plain-text password.
+    """
     return pwd_context.hash(password)
 
 
-def verify_password(
-    plain_password: str,
-    hashed_password: str,
-) -> bool:
-    return pwd_context.verify(
-        plain_password,
-        hashed_password,
-    )
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify a plain-text password against a hashed password.
+    """
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(
-    subject: str,
+    subject: str | Any,
+    expires_delta: timedelta | None = None,
 ) -> str:
-
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    """
+    Create a JWT access token.
+    """
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.access_token_expire_minutes
+        )
 
     payload = {
-        "sub": subject,
+        "sub": str(subject),
         "exp": expire,
     }
 
@@ -45,3 +50,18 @@ def create_access_token(
         settings.secret_key,
         algorithm=settings.algorithm,
     )
+
+
+def decode_access_token(token: str) -> dict:
+    """
+    Decode and validate a JWT access token.
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm],
+        )
+        return payload
+    except JWTError as exc:
+        raise ValueError("Invalid or expired token") from exc

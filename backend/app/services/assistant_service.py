@@ -1,38 +1,19 @@
-from app.schemas.assistant import AssistantRequest, AssistantResponse
+from app.providers.factory import ProviderFactory
 
 
 class AssistantService:
     """
-    Handles the business logic for the AI assistant.
+    Handles AI response generation using the configured provider.
     """
 
-    def get_response(
-        self,
-        request: AssistantRequest,
-    ) -> AssistantResponse:
-        """
-        Return a dummy AI response.
-        """
-        return AssistantResponse(
-            response=f"You said: {request.prompt}",
-            model="dummy-provider",
-        )
+    def __init__(self):
+        self.provider = ProviderFactory.get_provider()
 
     def generate_response(
         self,
         conversation_history: list[dict],
     ) -> str:
         """
-        Generate an AI response from the conversation history.
-        This is a temporary implementation until OpenRouter is integrated.
+        Generate an AI response using the configured provider.
         """
-
-        latest_prompt = conversation_history[-1]["content"]
-
-        response = self.get_response(
-            AssistantRequest(
-                prompt=latest_prompt,
-            )
-        )
-
-        return response.response
+        return self.provider.generate_response(conversation_history)

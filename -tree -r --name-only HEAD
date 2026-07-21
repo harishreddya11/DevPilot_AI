@@ -1,0 +1,28 @@
+[33mcommit 274de6786f171c37ed2bc1fe87e3997121e70ad8[m
+Author: Harish <harishreddya11@gmail.com>
+Date:   Sat Jul 18 16:03:01 2026 +0530
+
+    feat(messages): implement message service and conversation history
+
+backend/alembic/versions/11f843cce29b_create_messages_table.py
+backend/alembic/versions/8d51afce07a9_create_chats_table.py
+backend/app/api/v1/auth.py
+backend/app/api/v1/chats.py
+backend/app/api/v1/messages.py
+backend/app/api/v1/router.py
+backend/app/api/v1/users.py
+backend/app/core/dependencies.py
+backend/app/core/security.py
+backend/app/db/database.py
+backend/app/db/session.py
+backend/app/main.py
+backend/app/models/chat.py
+backend/app/models/message.py
+backend/app/schemas/auth.py
+backend/app/schemas/chat.py
+backend/app/schemas/message.py
+backend/app/services/assistant_service.py
+backend/app/services/auth_service.py
+backend/app/services/chat_service.py
+backend/app/services/message_service.py
+backend/requirements.txt

@@ -37,14 +37,15 @@ class Settings(BaseSettings):
     # ==========================================================
     # OpenRouter
     # ==========================================================
-    llm_provider: str = "openrouter"
+    # ==========================================================
+# LLM Provider
+# ==========================================================
+    llm_provider: str = "gemini"
 
-    openrouter_api_key: str = ""
+        # Google Gemini
+    gemini_api_key: str = ""
 
-    openrouter_model: str = "deepseek/deepseek-r1-0528:free"
-
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
-
+    gemini_model: str = "gemini-2.5-flash"
     # ==========================================================
     # CORS
     # ==========================================================
@@ -58,7 +59,15 @@ class Settings(BaseSettings):
     # ==========================================================
     upload_directory: str = "uploads"
 
-    max_upload_size_mb: int = 25
+    allowed_extensions: list[str] = [
+        ".pdf",
+        ".docx",
+        ".txt",
+        ".py",
+        ".java",
+        ".js",
+        ".md",
+    ]
 
     # ==========================================================
     # Logging

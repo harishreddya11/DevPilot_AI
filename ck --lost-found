@@ -1,0 +1,24 @@
+[33m565cd9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: checkout: moving from main to main
+[33m565cd9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{1}: checkout: moving from recovery to main
+[33mc65a3e4[m[33m ([m[1;32mrecovery[m[33m)[m refs/heads/recovery@{0}: branch: Created from c65a3e4
+[33mc65a3e4[m[33m ([m[1;32mrecovery[m[33m)[m HEAD@{2}: checkout: moving from main to recovery
+[33m565cd9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m refs/remotes/origin/main@{0}: update by push
+[33m565cd9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m refs/heads/main@{0}: commit: Add project configuration files
+[33m565cd9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{3}: commit: Add project configuration files
+[33m274de67[m refs/heads/main@{1}: reset: moving to origin/main
+[33m274de67[m HEAD@{4}: reset: moving to origin/main
+[33m55ef963[m refs/heads/main@{2}: commit: Add project configuration files
+[33m55ef963[m HEAD@{5}: commit: Add project configuration files
+[33mc65a3e4[m[33m ([m[1;32mrecovery[m[33m)[m refs/heads/main@{3}: commit: Add modular document parser architecture for RAG
+[33mc65a3e4[m[33m ([m[1;32mrecovery[m[33m)[m HEAD@{6}: commit: Add modular document parser architecture for RAG
+[33m274de67[m refs/remotes/origin/main@{1}: update by push
+[33m274de67[m refs/heads/main@{4}: commit: feat(messages): implement message service and conversation history
+[33m274de67[m HEAD@{7}: commit: feat(messages): implement message service and conversation history
+[33m286f503[m refs/remotes/origin/main@{2}: update by push
+[33m286f503[m refs/heads/main@{5}: commit: Setup PostgreSQL and Alembic migrations
+[33m286f503[m HEAD@{8}: commit: Setup PostgreSQL and Alembic migrations
+[33m55a9801[m refs/remotes/origin/main@{3}: update by push
+[33m55a9801[m refs/heads/main@{6}: Branch: renamed refs/heads/main to refs/heads/main
+[33m55a9801[m HEAD@{9}: Branch: renamed refs/heads/main to refs/heads/main
+[33m55a9801[m refs/heads/main@{7}: commit (initial): Create FastAPI application
+[33m55a9801[m HEAD@{11}: commit (initial): Create FastAPI application

@@ -1,38 +1,37 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+)
 
 
 def hash_password(password: str) -> str:
-    """
-    Hash a plain-text password.
-    """
     return pwd_context.hash(password)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify a plain-text password against a hashed password.
-    """
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(
+    plain_password: str,
+    hashed_password: str,
+) -> bool:
+    return pwd_context.verify(
+        plain_password,
+        hashed_password,
+    )
 
 
 def create_access_token(
-    subject: str | Any,
+    subject: str,
     expires_delta: timedelta | None = None,
 ) -> str:
-    """
-    Create a JWT access token.
-    """
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -40,8 +39,8 @@ def create_access_token(
             minutes=settings.access_token_expire_minutes
         )
 
-    payload = {
-        "sub": str(subject),
+    payload: dict[str, Any] = {
+        "sub": subject,
         "exp": expire,
     }
 
@@ -52,16 +51,9 @@ def create_access_token(
     )
 
 
-def decode_access_token(token: str) -> dict:
-    """
-    Decode and validate a JWT access token.
-    """
-    try:
-        payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=[settings.algorithm],
-        )
-        return payload
-    except JWTError as exc:
-        raise ValueError("Invalid or expired token") from exc
+def decode_access_token(token: str) -> dict[str, Any]:
+    return jwt.decode(
+        token,
+        settings.secret_key,
+        algorithms=[settings.algorithm],
+    )

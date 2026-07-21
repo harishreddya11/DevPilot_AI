@@ -1,4 +1,4 @@
-from app.providers.factory import ProviderFactory
+from app.providers.provider_factory import ProviderFactory
 
 
 class AssistantService:

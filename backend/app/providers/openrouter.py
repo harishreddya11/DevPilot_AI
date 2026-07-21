@@ -1,7 +1,7 @@
 import httpx
 
 from app.core.config import get_settings
-from app.providers.base import BaseProvider
+from app.providers.base_provider import BaseProvider
 
 
 class OpenRouterProvider(BaseProvider):

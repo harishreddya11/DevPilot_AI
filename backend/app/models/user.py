@@ -1,12 +1,15 @@
 import uuid
-from app.db.base import Base
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.chat import Chat
+    from app.models.document import Document
 
 
 class User(Base, TimestampMixin):
@@ -19,20 +22,34 @@ class User(Base, TimestampMixin):
 
     full_name: Mapped[str] = mapped_column(
         String(150),
+        nullable=False,
     )
 
     email: Mapped[str] = mapped_column(
         String(255),
         unique=True,
         index=True,
+        nullable=False,
     )
 
     hashed_password: Mapped[str] = mapped_column(
         String(255),
+        nullable=False,
     )
 
-    chats = relationship(
-        "Chat",
+    chats: Mapped[list["Chat"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
+
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"User(id={self.id}, "
+            f"email='{self.email}', "
+            f"full_name='{self.full_name}')"
+        )

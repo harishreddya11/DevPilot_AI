@@ -1,63 +1,94 @@
-import os
-import uuid
+from uuid import UUID
 
-from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
 from app.models.document import Document
-from app.schemas.document import DocumentResponse
+from app.models.document_chunk import DocumentChunk
+from app.services.chunk_service import ChunkingService
+from app.services.embedding_service import EmbeddingService
+from app.utils.pdf_parser import PDFParser
 
 
 class DocumentService:
-
-    def __init__(self, db: Session):
-        self.db = db
-        self.settings = get_settings()
-
-    def upload_document(
+    def __init__(
         self,
-        user_id: uuid.UUID,
-        file: UploadFile,
-    ) -> DocumentResponse:
+        db: Session,
+        chunk_service: ChunkingService,
+        embedding_service: EmbeddingService,
+    ):
+        self.db = db
+        self.chunk_service = chunk_service
+        self.embedding_service = embedding_service
 
-        # Validate extension
-        extension = os.path.splitext(file.filename)[1].lower()
+    async def process_document(
+        self,
+        *,
+        user_id: UUID,
+        filename: str,
+        file_path: str,
+        content_type: str,
+    ) -> Document:
+        """
+        Process an uploaded document:
+        1. Save document metadata.
+        2. Extract text from the PDF.
+        3. Split text into chunks.
+        4. Generate embeddings.
+        5. Save chunks with embeddings.
+        """
 
-        if extension not in self.settings.allowed_extensions:
-            raise HTTPException(
-                status_code=400,
-                detail="Unsupported file type.",
+        try:
+            # Save document metadata
+            document = Document(
+                user_id=user_id,
+                filename=filename,
+                file_path=file_path,
+                content_type=content_type,
             )
 
-        # Create upload directory
-        os.makedirs(
-            self.settings.upload_directory,
-            exist_ok=True,
-        )
+            self.db.add(document)
+            self.db.flush()
 
-        # Generate unique filename
-        unique_name = f"{uuid.uuid4()}{extension}"
+            # Extract text from PDF
+            text = PDFParser.extract_text(file_path)
 
-        file_path = os.path.join(
-            self.settings.upload_directory,
-            unique_name,
-        )
+            if not text or not text.strip():
+                raise ValueError("No text found in the uploaded PDF.")
 
-        # Save file
-        with open(file_path, "wb") as buffer:
-            buffer.write(file.file.read())
+            # Split into chunks
+            chunks = self.chunk_service.split(text)
 
-        # Save metadata
-        document = Document(
-            user_id=user_id,
-            filename=file.filename,
-            file_path=file_path,
-            content_type=file.content_type,
-        )
+            if not chunks:
+                raise ValueError("Failed to generate text chunks.")
 
-        self.db.add(document)
-        self.db.commit()
-        self.db.refresh(document)
+            # Generate embeddings
+            embeddings = await self.embedding_service.embed_documents(chunks)
 
-        return DocumentResponse.model_validate(document)
+            if len(chunks) != len(embeddings):
+                raise ValueError(
+                    "Number of embeddings does not match number of chunks."
+                )
+
+            # Create document chunks
+            document_chunks = [
+                DocumentChunk(
+                    document_id=document.id,
+                    chunk_index=index,
+                    content=chunk,
+                    embedding=embedding,
+                )
+                for index, (chunk, embedding) in enumerate(
+                    zip(chunks, embeddings)
+                )
+            ]
+
+            self.db.add_all(document_chunks)
+
+            self.db.commit()
+            self.db.refresh(document)
+
+            return document
+
+        except Exception:
+            self.db.rollback()
+            raise

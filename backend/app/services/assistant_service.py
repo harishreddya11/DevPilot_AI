@@ -37,13 +37,13 @@ class AssistantService:
         user_id: UUID,
         chat_id: UUID,
         question: str,
-    ) -> str:
+    ) -> dict:
         """
         Answer a user's question using RAG while maintaining
         conversation history.
         """
 
-        # Validate chat
+        # Validate chat ownership
         chat = self.chat_service.get_chat(
             chat_id=chat_id,
             user_id=user_id,
@@ -84,11 +84,13 @@ class AssistantService:
             top_k=5,
         )
 
-        context = (
-            "\n\n".join(context_chunks)
-            if context_chunks
-            else "No relevant context found."
-        )
+        if context_chunks:
+            context = "\n\n".join(
+                chunk.content
+                for chunk in context_chunks
+            )
+        else:
+            context = "No relevant context found."
 
         prompt = f"""
 You are DevPilot AI, an intelligent document assistant.
@@ -135,4 +137,16 @@ Answer
             content=answer,
         )
 
-        return answer
+        # Build citations
+        sources = [
+            {
+                "document": chunk.document.filename,
+                "chunk_index": chunk.chunk_index,
+            }
+            for chunk in context_chunks
+        ]
+
+        return {
+            "answer": answer,
+            "sources": sources,
+        }

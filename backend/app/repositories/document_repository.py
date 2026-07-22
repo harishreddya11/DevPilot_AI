@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
@@ -48,7 +48,6 @@ class DocumentRepository:
         for index, (chunk, embedding) in enumerate(
             zip(chunks, embeddings)
         ):
-
             document_chunks.append(
                 DocumentChunk(
                     document_id=document_id,
@@ -81,7 +80,7 @@ class DocumentRepository:
                 DocumentChunk.document_id == document_id
             )
             .order_by(
-                DocumentChunk.chunk_index
+                DocumentChunk.chunk_index.asc()
             )
             .all()
         )
@@ -93,15 +92,22 @@ class DocumentRepository:
         query_embedding: list[float],
         top_k: int = 5,
     ) -> list[DocumentChunk]:
+        """
+        Perform semantic search across all documents belonging
+        to the given user.
+        """
 
         return (
             self.db.query(DocumentChunk)
+            .options(
+                joinedload(DocumentChunk.document)
+            )
             .join(
                 Document,
                 Document.id == DocumentChunk.document_id,
             )
             .filter(
-                Document.user_id == user_id
+                Document.user_id == user_id,
             )
             .order_by(
                 DocumentChunk.embedding.cosine_distance(
@@ -115,21 +121,21 @@ class DocumentRepository:
     def delete_document(
         self,
         document_id: UUID,
-    ):
+    ) -> None:
 
         document = self.get_document(document_id)
 
         if document:
             self.db.delete(document)
 
-    def commit(self):
+    def commit(self) -> None:
         self.db.commit()
 
-    def rollback(self):
+    def rollback(self) -> None:
         self.db.rollback()
 
     def refresh(
         self,
         document: Document,
-    ):
+    ) -> None:
         self.db.refresh(document)

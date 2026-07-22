@@ -8,5 +8,11 @@ class AssistantRequest(BaseModel):
     question: str
 
 
+class Source(BaseModel):
+    document: str
+    chunk_index: int
+
+
 class AssistantResponse(BaseModel):
     answer: str
+    sources: list[Source]

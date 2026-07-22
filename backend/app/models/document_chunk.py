@@ -1,11 +1,10 @@
 import uuid
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-
-from pgvector.sqlalchemy import Vector
 
 from app.db.base import Base
 

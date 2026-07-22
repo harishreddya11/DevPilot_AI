@@ -31,10 +31,10 @@ async def chat(
 
     assistant = AssistantService(db)
 
-    answer = await assistant.ask(
+    response = await assistant.ask(
         user_id=current_user.id,
         chat_id=request.chat_id,
         question=request.question,
     )
 
-    return AssistantResponse(answer=answer)
+    return AssistantResponse(**response)

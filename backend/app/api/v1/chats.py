@@ -1,12 +1,17 @@
-import uuid
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user
-from app.db.database import get_db
+from app.api.dependencies.auth import get_current_user
+from app.db.session import get_db
 from app.models.user import User
-from app.schemas.chat import ChatCreate, ChatResponse, ChatUpdate
+from app.schemas.chat import (
+    ChatCreateRequest,
+    ChatResponse,
+    ChatListResponse,
+    MessageResponse,
+)
 from app.services.chat_service import ChatService
 
 router = APIRouter(
@@ -16,56 +21,65 @@ router = APIRouter(
 
 
 @router.post(
-    "/",
+    "",
     response_model=ChatResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_chat(
-    chat_data: ChatCreate,
+    request: ChatCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = ChatService(db)
-    return service.create_chat(chat_data, current_user)
+
+    chat = service.create_chat(
+        title=request.title,
+        user_id=current_user.id,
+    )
+
+    return chat
 
 
 @router.get(
-    "/",
-    response_model=list[ChatResponse],
+    "",
+    response_model=list[ChatListResponse],
 )
-def get_chats(
+def list_chats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = ChatService(db)
-    return service.get_chats(current_user)
+
+    return service.list_chats(
+        user_id=current_user.id,
+    )
 
 
 @router.get(
     "/{chat_id}",
-    response_model=ChatResponse,
+    response_model=list[MessageResponse],
 )
 def get_chat(
-    chat_id: uuid.UUID,
+    chat_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = ChatService(db)
-    return service.get_chat(chat_id, current_user)
 
+    chat = service.get_chat(
+        chat_id=chat_id,
+        user_id=current_user.id,
+    )
 
-@router.patch(
-    "/{chat_id}",
-    response_model=ChatResponse,
-)
-def update_chat(
-    chat_id: uuid.UUID,
-    chat_data: ChatUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    service = ChatService(db)
-    return service.update_chat(chat_id, chat_data, current_user)
+    if chat is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found.",
+        )
+
+    return service.get_chat_history(
+        chat_id=chat_id,
+    )
 
 
 @router.delete(
@@ -73,10 +87,21 @@ def update_chat(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_chat(
-    chat_id: uuid.UUID,
+    chat_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = ChatService(db)
-    service.delete_chat(chat_id, current_user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    deleted = service.delete_chat(
+        chat_id=chat_id,
+        user_id=current_user.id,
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found.",
+        )
+
+    return None

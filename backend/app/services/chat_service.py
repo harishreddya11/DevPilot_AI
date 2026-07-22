@@ -1,87 +1,125 @@
-import uuid
+from uuid import UUID
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.chat import Chat
-from app.models.user import User
-from app.schemas.chat import ChatCreate, ChatUpdate
+from app.models.message import Message
+from app.repositories.chat_repository import ChatRepository
+from app.repositories.message_repository import MessageRepository
 
 
 class ChatService:
     def __init__(self, db: Session):
-        self.db = db
+        self.chat_repository = ChatRepository(db)
+        self.message_repository = MessageRepository(db)
 
     def create_chat(
         self,
-        chat_data: ChatCreate,
-        current_user: User,
+        *,
+        title: str,
+        user_id: UUID,
     ) -> Chat:
-        chat = Chat(
-            title=chat_data.title,
-            user_id=current_user.id,
-        )
-
-        self.db.add(chat)
-        self.db.commit()
-        self.db.refresh(chat)
-
-        return chat
-
-    def get_chats(
-        self,
-        current_user: User,
-    ) -> list[Chat]:
-        return (
-            self.db.query(Chat)
-            .filter(Chat.user_id == current_user.id)
-            .order_by(Chat.created_at.desc())
-            .all()
+        """
+        Create a new chat.
+        """
+        return self.chat_repository.create(
+            title=title,
+            user_id=user_id,
         )
 
     def get_chat(
         self,
-        chat_id: uuid.UUID,
-        current_user: User,
-    ) -> Chat:
-        chat = (
-            self.db.query(Chat)
-            .filter(
-                Chat.id == chat_id,
-                Chat.user_id == current_user.id,
-            )
-            .first()
+        *,
+        chat_id: UUID,
+        user_id: UUID,
+    ) -> Chat | None:
+        """
+        Get a user's chat.
+        """
+        return self.chat_repository.get_user_chat(
+            chat_id=chat_id,
+            user_id=user_id,
         )
 
-        if not chat:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Chat not found",
-            )
-
-        return chat
-
-    def update_chat(
+    def list_chats(
         self,
-        chat_id: uuid.UUID,
-        chat_data: ChatUpdate,
-        current_user: User,
-    ) -> Chat:
-        chat = self.get_chat(chat_id, current_user)
+        *,
+        user_id: UUID,
+    ) -> list[Chat]:
+        """
+        List all chats for a user.
+        """
+        return self.chat_repository.list_by_user(user_id)
 
-        chat.title = chat_data.title
+    def save_user_message(
+        self,
+        *,
+        chat_id: UUID,
+        content: str,
+    ) -> Message:
+        """
+        Save a user message.
+        """
+        return self.message_repository.create(
+            chat_id=chat_id,
+            role="user",
+            content=content,
+        )
 
-        self.db.commit()
-        self.db.refresh(chat)
+    def save_ai_message(
+        self,
+        *,
+        chat_id: UUID,
+        content: str,
+    ) -> Message:
+        """
+        Save an AI message.
+        """
+        return self.message_repository.create(
+            chat_id=chat_id,
+            role="assistant",
+            content=content,
+        )
 
-        return chat
+    def get_chat_history(
+        self,
+        *,
+        chat_id: UUID,
+    ) -> list[Message]:
+        """
+        Get all messages in a chat.
+        """
+        return self.message_repository.list_by_chat(chat_id)
 
     def delete_chat(
         self,
-        chat_id: uuid.UUID,
-        current_user: User,
-    ) -> None:
-        chat = self.get_chat(chat_id, current_user)
+        *,
+        chat_id: UUID,
+        user_id: UUID,
+    ) -> bool:
+        """
+        Delete a chat and all its messages.
+        """
+        chat = self.chat_repository.get_user_chat(
+            chat_id=chat_id,
+            user_id=user_id,
+        )
 
-        self.db.delete(chat)
-        self.db.commit()
+        if chat is None:
+            return False
+
+        self.message_repository.delete_by_chat(chat_id)
+        self.chat_repository.delete(chat)
+
+        return True
+    
+    def get_recent_messages(
+        self,
+        *,
+        chat_id: UUID,
+        limit: int = 10,
+    ):
+        return self.message_repository.get_recent_messages(
+            chat_id=chat_id,
+            limit=limit,
+        )

@@ -1,7 +1,13 @@
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import get_current_user
@@ -19,7 +25,10 @@ router = APIRouter(
 )
 
 UPLOAD_DIR = Path(settings.upload_directory)
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 
 @router.post(
@@ -36,14 +45,17 @@ async def upload_document(
     if extension not in settings.allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail="Unsupported file type.",
+            detail=f"Unsupported file type: {extension}",
         )
 
     unique_filename = f"{uuid4()}{extension}"
+
     file_path = UPLOAD_DIR / unique_filename
 
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
+    contents = await file.read()
+
+    with open(file_path, "wb") as f:
+        f.write(contents)
 
     service = DocumentService(
         db=db,
@@ -55,7 +67,8 @@ async def upload_document(
         user_id=current_user.id,
         filename=file.filename,
         file_path=str(file_path),
-        content_type=file.content_type or "application/octet-stream",
+        content_type=file.content_type
+        or "application/octet-stream",
     )
 
     return DocumentUploadResponse(

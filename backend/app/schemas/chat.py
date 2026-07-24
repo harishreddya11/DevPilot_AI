@@ -31,3 +31,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
+
+class ChatCreateRequest(BaseModel):
+    title: str
+    project_id: UUID

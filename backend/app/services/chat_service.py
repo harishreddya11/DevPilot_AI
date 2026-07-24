@@ -18,6 +18,7 @@ class ChatService:
         *,
         title: str,
         user_id: UUID,
+        project_id: UUID,
     ) -> Chat:
         """
         Create a new chat.

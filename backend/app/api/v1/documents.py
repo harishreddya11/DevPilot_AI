@@ -1,6 +1,6 @@
 from pathlib import Path
 from uuid import uuid4
-
+from uuid import UUID
 from fastapi import (
     APIRouter,
     Depends,
@@ -9,7 +9,9 @@ from fastapi import (
     UploadFile,
 )
 from sqlalchemy.orm import Session
-
+from app.repositories.document_repository import DocumentRepository
+from app.repositories.project_repository import ProjectRepository
+from app.schemas.document import DocumentResponse
 from app.api.dependencies.auth import get_current_user
 from app.core.config import settings
 from app.db.session import get_db
@@ -75,4 +77,29 @@ async def upload_document(
         id=document.id,
         filename=document.filename,
         message="Document uploaded successfully.",
+    )
+
+@router.post(
+    "/{project_id}/documents",
+    response_model=DocumentResponse,
+    status_code=201,
+)
+def upload_document(
+    project_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document_repository = DocumentRepository(db)
+    project_repository = ProjectRepository(db)
+
+    service = DocumentService(
+        document_repository,
+        project_repository,
+    )
+
+    return service.upload_document(
+        project_id=project_id,
+        user_id=current_user.id,
+        file=file,
     )

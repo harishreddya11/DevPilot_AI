@@ -18,16 +18,20 @@ class DocumentRepository:
         self,
         *,
         user_id: UUID,
+        project_id: UUID,
         filename: str,
-        file_path: str,
-        content_type: str,
+        file_type: str,
+        file_size: int,
+        storage_path: str,
     ) -> Document:
 
         document = Document(
             user_id=user_id,
+            project_id=project_id,
             filename=filename,
-            file_path=file_path,
-            content_type=content_type,
+            file_type=file_type,
+            file_size=file_size,
+            storage_path=storage_path,
         )
 
         self.db.add(document)

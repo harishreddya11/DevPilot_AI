@@ -1,3 +1,5 @@
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -35,6 +37,7 @@ def create_chat(
     chat = service.create_chat(
         title=request.title,
         user_id=current_user.id,
+        project_id=request.project_id,
     )
 
     return chat

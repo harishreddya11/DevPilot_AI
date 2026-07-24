@@ -1,98 +1,88 @@
+from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from fastapi import HTTPException, UploadFile, status
 
 from app.models.document import Document
-from app.parsers.parser_factory import ParserFactory
-from app.repositories.document_repository import (
-    DocumentRepository,
-)
-from app.services.chunk_service import ChunkingService
-from app.services.embedding_service import EmbeddingService
+from app.repositories.document_repository import DocumentRepository
+from app.repositories.project_repository import ProjectRepository
 
 
 class DocumentService:
+    ALLOWED_EXTENSIONS = {
+        ".pdf",
+        ".docx",
+        ".txt",
+        ".md",
+        ".py",
+        ".java",
+        ".js",
+        ".ts",
+        ".json",
+        ".yaml",
+        ".yml",
+    }
+
+    MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
     def __init__(
         self,
-        db: Session,
-        chunk_service: ChunkingService,
-        embedding_service: EmbeddingService,
+        document_repository: DocumentRepository,
+        project_repository: ProjectRepository,
     ):
-        self.repository = DocumentRepository(db)
-        self.chunk_service = chunk_service
-        self.embedding_service = embedding_service
+        self.document_repository = document_repository
+        self.project_repository = project_repository
 
-    async def process_document(
+    def upload_document(
         self,
         *,
+        project_id: UUID,
         user_id: UUID,
-        filename: str,
-        file_path: str,
-        content_type: str,
+        file: UploadFile,
     ) -> Document:
 
-        try:
+        project = self.project_repository.get_by_id(project_id)
 
-            # Select parser
-            parser = ParserFactory.get_parser(filename)
-
-            # Extract text
-            text = parser.extract_text(file_path)
-
-            if not text:
-                raise ValueError(
-                    "Document is empty."
-                )
-
-            text = text.strip()
-
-            if not text:
-                raise ValueError(
-                    "No readable text found."
-                )
-
-            # Save document
-            document = self.repository.create_document(
-                user_id=user_id,
-                filename=filename,
-                file_path=file_path,
-                content_type=content_type,
+        if not project or project.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
             )
 
-            # Chunk document
-            chunks = self.chunk_service.split(text)
+        extension = Path(file.filename).suffix.lower()
 
-            if not chunks:
-                raise ValueError(
-                    "Failed to create chunks."
-                )
-
-            # Generate embeddings
-            embeddings = (
-                await self.embedding_service.embed_documents(
-                    chunks
-                )
+        if extension not in self.ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported file type.",
             )
 
-            if len(chunks) != len(embeddings):
-                raise ValueError(
-                    "Embedding count mismatch."
-                )
+        content = file.file.read()
 
-            # Save chunks
-            self.repository.create_chunks(
-                document_id=document.id,
-                chunks=chunks,
-                embeddings=embeddings,
+        if len(content) > self.MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size exceeds 20 MB.",
             )
 
-            self.repository.commit()
+        storage_dir = Path("storage") / "projects" / str(project_id)
+        storage_dir.mkdir(parents=True, exist_ok=True)
 
-            self.repository.refresh(document)
+        storage_path = storage_dir / file.filename
 
-            return document
+        with open(storage_path, "wb") as f:
+            f.write(content)
 
-        except Exception:
-            self.repository.rollback()
-            raise
+        document = self.document_repository.create_document(
+            user_id=user_id,
+            project_id=project_id,
+            filename=file.filename,
+            file_type=extension,
+            file_size=len(content),
+            storage_path=str(storage_path),
+        )
+
+        self.document_repository.commit()
+        self.document_repository.refresh(document)
+
+        return document

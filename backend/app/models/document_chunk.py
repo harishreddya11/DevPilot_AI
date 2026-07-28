@@ -36,7 +36,7 @@ class DocumentChunk(Base):
     )
 
     embedding: Mapped[list[float]] = mapped_column(
-        Vector(3072),
+        Vector(384),
         nullable=False,
     )
 

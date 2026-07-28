@@ -50,7 +50,9 @@ def extract_document(
             detail="Document not found.",
         )
 
-    processor = DocumentProcessingService()
+    processor = DocumentProcessingService(
+        document_repository=document_repository,
+    )
 
     text = processor.extract_text(document)
 
@@ -74,9 +76,14 @@ def upload_document(
     document_repository = DocumentRepository(db)
     project_repository = ProjectRepository(db)
 
+    processing_service = DocumentProcessingService(
+        document_repository=document_repository,
+    )
+
     service = DocumentService(
-        document_repository,
-        project_repository,
+        document_repository=document_repository,
+        project_repository=project_repository,
+        document_processing_service=processing_service,
     )
 
     return service.upload_document(
@@ -98,21 +105,34 @@ def test_processing(
     if document is None:
         raise HTTPException(
             status_code=404,
-            detail="Document not found.",
+            detail="Document not found",
         )
 
     if document.user_id != current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Access denied.",
+            detail="Access denied",
         )
 
-    processor = DocumentProcessingService()
+    processor = DocumentProcessingService(
+        document_repository=document_repository,
+    )
 
     text = processor.extract_text(document)
+    chunk_service = ChunkingService(
+        chunk_size=1000,
+        chunk_overlap=200,
+    )
+
+    chunks = chunk_service.split_text(text)
+
+    embeddings = EmbeddingService.generate_embeddings(chunks)
 
     return {
-        "document": document.filename,
+        "filename": document.filename,
         "characters": len(text),
-        "text": text
+        "total_chunks": len(chunks),
+        "embedding_dimension": len(embeddings[0]) if embeddings else 0,
+        "sample_chunk": chunks[0] if chunks else "",
+        "sample_embedding": embeddings[0][:10] if embeddings else []
     }

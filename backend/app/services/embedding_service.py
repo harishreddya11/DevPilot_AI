@@ -1,35 +1,49 @@
-from app.providers.provider_factory import ProviderFactory
+"""
+Embedding Service
+
+Generates vector embeddings for text chunks.
+"""
+
+from sentence_transformers import SentenceTransformer
 
 
 class EmbeddingService:
-    """
-    Service responsible for generating vector embeddings.
-    """
+    _model = None
 
-    def __init__(self):
-        self.provider = ProviderFactory.get_provider()
+    @classmethod
+    def get_model(cls):
+        if cls._model is None:
+            cls._model = SentenceTransformer(
+                "sentence-transformers/all-MiniLM-L6-v2"
+            )
+        return cls._model
 
-    async def generate_embedding(self, text: str) -> list[float]:
+    @classmethod
+    def generate_embedding(cls, text: str) -> list[float]:
         """
-        Generate an embedding for a single piece of text.
+        Generate embedding for a single text.
         """
-        if not text or not text.strip():
-            raise ValueError("Text cannot be empty.")
+        model = cls.get_model()
 
-        return await self.provider.generate_embedding(text)
+        embedding = model.encode(
+            text,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
 
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return embedding.tolist()
+
+    @classmethod
+    def generate_embeddings(cls, texts: list[str]) -> list[list[float]]:
         """
-        Generate embeddings for multiple text chunks.
+        Generate embeddings for multiple texts.
         """
+        model = cls.get_model()
 
-        if not texts:
-            return []
+        embeddings = model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
 
-        embeddings = []
-
-        for text in texts:
-            embedding = await self.generate_embedding(text)
-            embeddings.append(embedding)
-
-        return embeddings
+        return embeddings.tolist()

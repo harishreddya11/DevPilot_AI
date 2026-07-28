@@ -8,7 +8,7 @@ from app.parsers.markdown_parser import MarkdownParser
 from app.parsers.pdf_parser import PDFParser
 from app.parsers.pptx_parser import PowerPointParser
 from app.parsers.txt_parser import TxtParser
-
+from app.parsers.image_parser import ImageParser
 
 class ParserFactory:
 
@@ -22,7 +22,13 @@ class ParserFactory:
         ".xls": ExcelParser,
         ".pptx": PowerPointParser,
         ".json": JsonParser,
-    }
+        ".png": ImageParser,
+        ".jpg": ImageParser,
+        ".jpeg": ImageParser,
+        ".bmp": ImageParser,
+        ".tiff": ImageParser,
+        ".webp": ImageParser,
+        }
 
     @classmethod
     def get_parser(cls, filename: str):

@@ -1,63 +1,88 @@
-import os
-import uuid
+from pathlib import Path
+from uuid import UUID
 
-from fastapi import HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from fastapi import HTTPException, UploadFile, status
 
-from app.core.config import get_settings
 from app.models.document import Document
-from app.schemas.document import DocumentResponse
+from app.repositories.document_repository import DocumentRepository
+from app.repositories.project_repository import ProjectRepository
 
 
 class DocumentService:
+    ALLOWED_EXTENSIONS = {
+        ".pdf",
+        ".docx",
+        ".txt",
+        ".md",
+        ".py",
+        ".java",
+        ".js",
+        ".ts",
+        ".json",
+        ".yaml",
+        ".yml",
+    }
 
-    def __init__(self, db: Session):
-        self.db = db
-        self.settings = get_settings()
+    MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+
+    def __init__(
+        self,
+        document_repository: DocumentRepository,
+        project_repository: ProjectRepository,
+    ):
+        self.document_repository = document_repository
+        self.project_repository = project_repository
 
     def upload_document(
         self,
-        user_id: uuid.UUID,
+        *,
+        project_id: UUID,
+        user_id: UUID,
         file: UploadFile,
-    ) -> DocumentResponse:
+    ) -> Document:
 
-        # Validate extension
-        extension = os.path.splitext(file.filename)[1].lower()
+        project = self.project_repository.get_by_id(project_id)
 
-        if extension not in self.settings.allowed_extensions:
+        if not project or project.user_id != user_id:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+
+        extension = Path(file.filename).suffix.lower()
+
+        if extension not in self.ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unsupported file type.",
             )
 
-        # Create upload directory
-        os.makedirs(
-            self.settings.upload_directory,
-            exist_ok=True,
-        )
+        content = file.file.read()
 
-        # Generate unique filename
-        unique_name = f"{uuid.uuid4()}{extension}"
+        if len(content) > self.MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size exceeds 20 MB.",
+            )
 
-        file_path = os.path.join(
-            self.settings.upload_directory,
-            unique_name,
-        )
+        storage_dir = Path("storage") / "projects" / str(project_id)
+        storage_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save file
-        with open(file_path, "wb") as buffer:
-            buffer.write(file.file.read())
+        storage_path = storage_dir / file.filename
 
-        # Save metadata
-        document = Document(
+        with open(storage_path, "wb") as f:
+            f.write(content)
+
+        document = self.document_repository.create_document(
             user_id=user_id,
+            project_id=project_id,
             filename=file.filename,
-            file_path=file_path,
-            content_type=file.content_type,
+            file_type=extension,
+            file_size=len(content),
+            storage_path=str(storage_path),
         )
 
-        self.db.add(document)
-        self.db.commit()
-        self.db.refresh(document)
+        self.document_repository.commit()
+        self.document_repository.refresh(document)
 
-        return DocumentResponse.model_validate(document)
+        return document

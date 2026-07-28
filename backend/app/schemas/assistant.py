@@ -1,22 +1,18 @@
-from pydantic import BaseModel, Field
+from uuid import UUID
+
+from pydantic import BaseModel
 
 
 class AssistantRequest(BaseModel):
-    """
-    Request schema for the AI assistant.
-    """
+    chat_id: UUID
+    question: str
 
-    prompt: str = Field(
-        ...,
-        min_length=1,
-        description="User's message to the AI assistant."
-    )
+
+class Source(BaseModel):
+    document: str
+    chunk_index: int
 
 
 class AssistantResponse(BaseModel):
-    """
-    Response schema for the AI assistant.
-    """
-
-    response: str
-    model: str
+    answer: str
+    sources: list[Source]

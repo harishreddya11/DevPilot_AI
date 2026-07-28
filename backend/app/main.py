@@ -10,6 +10,9 @@ from app.api.v1.users import router as users_router
 from app.api.v1.chats import router as chats_router
 from app.api.v1.messages import router as messages_router
 from app.api.v1.documents import router as documents_router
+from app.api.v1.endpoints.test import router as test_router
+from app.api.v1.projects import router as projects_router
+from app.api.v1.documents import router as document_router
 
 # Load application settings
 settings = get_settings()
@@ -35,7 +38,7 @@ app.include_router(
     prefix="/api/v1",
 )
 
-
+app.include_router(test_router)
 
 app.include_router(
     auth_router,
@@ -61,6 +64,12 @@ app.include_router(
     documents_router,
     prefix="/api/v1",
 )
+
+app.include_router(
+    projects_router,
+    prefix="/api/v1",
+)
+app.include_router(document_router, prefix="/api/v1")
 @app.get("/", tags=["Root"])
 def root():
     """

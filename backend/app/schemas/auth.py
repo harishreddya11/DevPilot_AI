@@ -18,10 +18,10 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+
 class UserResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     full_name: str
     email: EmailStr
-    
 
     model_config = ConfigDict(from_attributes=True)

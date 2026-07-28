@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     gemini_model: str = "gemini-2.5-flash"
+    embedding_model: str = "gemini-embedding-001"
     # ==========================================================
     # CORS
     # ==========================================================
@@ -63,6 +64,12 @@ class Settings(BaseSettings):
         ".pdf",
         ".docx",
         ".txt",
+        ".md",
+        ".csv",
+        ".xlsx",
+        ".xls",
+        ".pptx",
+        ".json",
         ".py",
         ".java",
         ".js",
@@ -98,3 +105,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+settings = get_settings()

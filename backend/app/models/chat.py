@@ -1,5 +1,6 @@
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy.orm import relationship
 import uuid
-
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -34,3 +35,14 @@ class Chat(Base, TimestampMixin):
         back_populates="chat",
         cascade="all, delete-orphan",
     )
+    project_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id"),
+        nullable=False,
+    )
+
+    project = relationship(
+        "Project",
+        back_populates="chats",
+    )
+    

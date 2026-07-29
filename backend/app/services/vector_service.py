@@ -28,7 +28,7 @@ class VectorService:
     def search(
         self,
         *,
-        user_id: UUID,
+        project_id: UUID,
         query: str,
         top_k: int = 5,
     ) -> list[DocumentChunk]:
@@ -42,7 +42,7 @@ class VectorService:
         query_embedding = EmbeddingService.generate_embedding(query)
 
         return self.document_repository.search_similar_chunks(
-            user_id=user_id,
+            project_id=project_id,
             query_embedding=query_embedding,
             top_k=top_k,
         )

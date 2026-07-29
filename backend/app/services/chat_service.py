@@ -26,6 +26,7 @@ class ChatService:
         return self.chat_repository.create(
             title=title,
             user_id=user_id,
+            project_id=project_id,
         )
 
     def get_chat(

@@ -10,6 +10,7 @@ from app.db.base import Base
 # Import all models so Alembic can detect them
 # Import all models so Alembic can detect them
 from app.models.user import User
+from app.models.project import Project
 from app.models.chat import Chat
 from app.models.message import Message
 from app.models.document import Document

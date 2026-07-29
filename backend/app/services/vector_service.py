@@ -1,7 +1,5 @@
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from app.models.document_chunk import DocumentChunk
 from app.repositories.document_repository import DocumentRepository
 from app.services.embedding_service import EmbeddingService
@@ -9,40 +7,42 @@ from app.services.embedding_service import EmbeddingService
 
 class VectorService:
     """
-    Service responsible for semantic vector search.
+    Handles embedding generation and semantic search.
     """
 
     def __init__(
         self,
-        db: Session,
-        embedding_service: EmbeddingService,
+        document_repository: DocumentRepository,
     ):
-        self.embedding_service = embedding_service
-        self.repository = DocumentRepository(db)
+        self.document_repository = document_repository
 
-    async def search(
+    def generate_embeddings(
+        self,
+        chunks: list[str],
+    ) -> list[list[float]]:
+        """
+        Generate embeddings for document chunks.
+        """
+        return EmbeddingService.generate_embeddings(chunks)
+
+    def search(
         self,
         *,
-        user_id: UUID,
+        project_id: UUID,
         query: str,
         top_k: int = 5,
     ) -> list[DocumentChunk]:
         """
-        Generate an embedding for the query and return
-        the most relevant document chunks.
+        Perform semantic search over the user's document chunks.
         """
 
         if not query.strip():
             return []
 
-        query_embedding = (
-            await self.embedding_service.generate_embedding(
-                query
-            )
-        )
+        query_embedding = EmbeddingService.generate_embedding(query)
 
-        return self.repository.search_similar_chunks(
-            user_id=user_id,
+        return self.document_repository.search_similar_chunks(
+            project_id=project_id,
             query_embedding=query_embedding,
             top_k=top_k,
         )

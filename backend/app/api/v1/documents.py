@@ -20,6 +20,7 @@ from app.schemas.document import DocumentUploadResponse
 from app.services.chunk_service import ChunkingService
 from app.services.document_service import DocumentService
 from app.services.embedding_service import EmbeddingService
+from app.services.document_processing_service import DocumentProcessingService
 
 router = APIRouter(
     prefix="/documents",
@@ -33,51 +34,33 @@ UPLOAD_DIR.mkdir(
 )
 
 
-@router.post(
-    "/upload",
-    response_model=DocumentUploadResponse,
-)
-async def upload_document(
-    file: UploadFile = File(...),
+@router.get("/{document_id}/extract")
+def extract_document(
+    document_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    extension = Path(file.filename).suffix.lower()
+    document_repository = DocumentRepository(db)
 
-    if extension not in settings.allowed_extensions:
+    document = document_repository.get_by_id(document_id)
+
+    if document is None:
         raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {extension}",
+            status_code=404,
+            detail="Document not found.",
         )
 
-    unique_filename = f"{uuid4()}{extension}"
-
-    file_path = UPLOAD_DIR / unique_filename
-
-    contents = await file.read()
-
-    with open(file_path, "wb") as f:
-        f.write(contents)
-
-    service = DocumentService(
-        db=db,
-        chunk_service=ChunkingService(),
-        embedding_service=EmbeddingService(),
+    processor = DocumentProcessingService(
+        document_repository=document_repository,
     )
 
-    document = await service.process_document(
-        user_id=current_user.id,
-        filename=file.filename,
-        file_path=str(file_path),
-        content_type=file.content_type
-        or "application/octet-stream",
-    )
+    text = processor.extract_text(document)
 
-    return DocumentUploadResponse(
-        id=document.id,
-        filename=document.filename,
-        message="Document uploaded successfully.",
-    )
+    return {
+        "document": document.filename,
+        "characters": len(text),
+        "preview": text[:1000],
+    }
 
 @router.post(
     "/{project_id}/documents",
@@ -93,9 +76,14 @@ def upload_document(
     document_repository = DocumentRepository(db)
     project_repository = ProjectRepository(db)
 
+    processing_service = DocumentProcessingService(
+        document_repository=document_repository,
+    )
+
     service = DocumentService(
-        document_repository,
-        project_repository,
+        document_repository=document_repository,
+        project_repository=project_repository,
+        document_processing_service=processing_service,
     )
 
     return service.upload_document(
@@ -103,3 +91,48 @@ def upload_document(
         user_id=current_user.id,
         file=file,
     )
+
+@router.get("/{document_id}/test-processing")
+def test_processing(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document_repository = DocumentRepository(db)
+
+    document = document_repository.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
+
+    if document.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
+        )
+
+    processor = DocumentProcessingService(
+        document_repository=document_repository,
+    )
+
+    text = processor.extract_text(document)
+    chunk_service = ChunkingService(
+        chunk_size=1000,
+        chunk_overlap=200,
+    )
+
+    chunks = chunk_service.split_text(text)
+
+    embeddings = EmbeddingService.generate_embeddings(chunks)
+
+    return {
+        "filename": document.filename,
+        "characters": len(text),
+        "total_chunks": len(chunks),
+        "embedding_dimension": len(embeddings[0]) if embeddings else 0,
+        "sample_chunk": chunks[0] if chunks else "",
+        "sample_embedding": embeddings[0][:10] if embeddings else []
+    }

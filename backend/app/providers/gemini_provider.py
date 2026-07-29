@@ -1,3 +1,5 @@
+from typing import AsyncGenerator
+
 from google import genai
 
 from app.core.config import settings
@@ -24,6 +26,22 @@ class GeminiProvider(BaseProvider):
         )
 
         return response.text
+
+    async def stream_text(
+        self,
+        prompt: str,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream a text response using Gemini.
+        """
+        stream = self.client.models.generate_content_stream(
+            model=self.llm_model,
+            contents=prompt,
+        )
+
+        for chunk in stream:
+            if chunk.text:
+                yield chunk.text
 
     async def generate_embedding(self, text: str) -> list[float]:
         """

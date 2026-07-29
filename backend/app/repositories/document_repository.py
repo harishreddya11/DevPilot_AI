@@ -92,13 +92,13 @@ class DocumentRepository:
     def search_similar_chunks(
         self,
         *,
-        user_id: UUID,
+        project_id: UUID,
         query_embedding: list[float],
         top_k: int = 5,
     ) -> list[DocumentChunk]:
         """
         Perform semantic search across all documents belonging
-        to the given user.
+        to the given project.
         """
 
         return (
@@ -111,7 +111,7 @@ class DocumentRepository:
                 Document.id == DocumentChunk.document_id,
             )
             .filter(
-                Document.user_id == user_id,
+                Document.project_id == project_id,
             )
             .order_by(
                 DocumentChunk.embedding.cosine_distance(

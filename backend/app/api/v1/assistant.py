@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import get_current_user
@@ -38,3 +39,29 @@ async def chat(
     )
 
     return AssistantResponse(**response)
+
+
+@router.post("/chat/stream")
+async def chat_stream(
+    request: AssistantRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Stream an AI response.
+    """
+
+    assistant = AssistantService(db)
+
+    async def event_generator():
+        async for chunk in assistant.stream_chat(
+            user_id=current_user.id,
+            chat_id=request.chat_id,
+            question=request.question,
+        ):
+            yield chunk
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/plain",
+    )

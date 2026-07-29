@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.projects import router as project_router
-
+from app.api.v1 import retrieval
 from app.api.v1 import (
     assistant,
     auth,
@@ -20,3 +20,4 @@ api_router.include_router(messages.router)
 api_router.include_router(assistant.router)
 api_router.include_router(documents.router)
 api_router.include_router(project_router)
+api_router.include_router(retrieval.router)

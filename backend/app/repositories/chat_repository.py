@@ -16,6 +16,7 @@ class ChatRepository(BaseRepository[Chat]):
         *,
         title: str,
         user_id: UUID,
+        project_id: UUID,
     ) -> Chat:
         """
         Create a new chat.
@@ -23,6 +24,7 @@ class ChatRepository(BaseRepository[Chat]):
         chat = Chat(
             title=title,
             user_id=user_id,
+            project_id=project_id,
         )
 
         self.db.add(chat)

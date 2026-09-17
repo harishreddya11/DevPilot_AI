@@ -6,10 +6,13 @@ from fastapi import HTTPException, UploadFile, status
 from app.models.document import Document
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository
-from app.services.document_processing_service import DocumentProcessingService
+from app.services.document_processing_service import (
+    DocumentProcessingService,
+)
 
 
 class DocumentService:
+
     ALLOWED_EXTENSIONS = {
         ".pdf",
         ".docx",
@@ -40,7 +43,13 @@ class DocumentService:
     ):
         self.document_repository = document_repository
         self.project_repository = project_repository
-        self.document_processing_service = document_processing_service
+        self.document_processing_service = (
+            document_processing_service
+        )
+
+    # ---------------------------------------------------------
+    # UPLOAD DOCUMENT
+    # ---------------------------------------------------------
 
     def upload_document(
         self,
@@ -57,6 +66,13 @@ class DocumentService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Project not found.",
+            )
+
+        # Validate filename
+        if not file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Filename is required.",
             )
 
         # Validate extension
@@ -79,8 +95,16 @@ class DocumentService:
             )
 
         # Save file
-        storage_dir = Path("storage") / "projects" / str(project_id)
-        storage_dir.mkdir(parents=True, exist_ok=True)
+        storage_dir = (
+            Path("storage")
+            / "projects"
+            / str(project_id)
+        )
+
+        storage_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
         storage_path = storage_dir / file.filename
 
@@ -101,6 +125,74 @@ class DocumentService:
         self.document_repository.refresh(document)
 
         # Process document
-        self.document_processing_service.process_document(document)
+        self.document_processing_service.process_document(
+            document
+        )
 
         return document
+
+    # ---------------------------------------------------------
+    # LIST PROJECT DOCUMENTS
+    # ---------------------------------------------------------
+
+    def get_project_documents(
+        self,
+        *,
+        project_id: UUID,
+        user_id: UUID,
+    ) -> list[Document]:
+
+        # Validate project ownership
+        project = self.project_repository.get_by_id(project_id)
+
+        if project is None or project.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+
+        return self.document_repository.get_documents_by_project(
+            project_id
+        )
+
+    # ---------------------------------------------------------
+    # DELETE DOCUMENT
+    # ---------------------------------------------------------
+
+    def delete_document(
+        self,
+        *,
+        document_id: UUID,
+        user_id: UUID,
+    ) -> None:
+
+        # Find document
+        document = self.document_repository.get_document(
+            document_id
+        )
+
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found.",
+            )
+
+        # Validate ownership
+        if document.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied.",
+            )
+
+        # Delete physical file
+        storage_path = Path(document.storage_path)
+
+        if storage_path.exists():
+            storage_path.unlink()
+
+        # Delete database record
+        self.document_repository.delete_document(
+            document_id
+        )
+
+        self.document_repository.commit()

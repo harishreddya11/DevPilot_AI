@@ -72,7 +72,21 @@ class DocumentRepository:
             Document,
             document_id,
         )
+    def get_documents_by_project(
+        self,
+        project_id: UUID,
+    ) -> list[Document]:
 
+        return (
+            self.db.query(Document)
+            .filter(
+                Document.project_id == project_id,
+            )
+            .order_by(
+                Document.uploaded_at.desc()
+            )
+            .all()
+    )
     def get_document_chunks(
         self,
         document_id: UUID,

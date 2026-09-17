@@ -13,6 +13,7 @@ from app.api.v1.documents import router as documents_router
 from app.api.v1.endpoints.test import router as test_router
 from app.api.v1.projects import router as projects_router
 from app.api.v1.documents import router as document_router
+from fastapi.middleware.cors import CORSMiddleware
 
 # Load application settings
 settings = get_settings()
@@ -22,6 +23,19 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="An AI-powered developer workspace.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5174",
+        "http://localhost:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 register_exception_handlers(app)

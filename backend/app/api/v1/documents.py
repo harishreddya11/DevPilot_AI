@@ -91,7 +91,60 @@ def upload_document(
         user_id=current_user.id,
         file=file,
     )
+@router.get(
+    "/{project_id}/documents",
+    response_model=list[DocumentResponse],
+)
+def list_project_documents(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document_repository = DocumentRepository(db)
+    project_repository = ProjectRepository(db)
 
+    processing_service = DocumentProcessingService(
+        document_repository=document_repository,
+    )
+
+    service = DocumentService(
+        document_repository=document_repository,
+        project_repository=project_repository,
+        document_processing_service=processing_service,
+    )
+
+    return service.get_project_documents(
+        project_id=project_id,
+        user_id=current_user.id,
+    )
+@router.delete(
+    "/{document_id}",
+    status_code=204,
+)
+def delete_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document_repository = DocumentRepository(db)
+    project_repository = ProjectRepository(db)
+
+    processing_service = DocumentProcessingService(
+        document_repository=document_repository,
+    )
+
+    service = DocumentService(
+        document_repository=document_repository,
+        project_repository=project_repository,
+        document_processing_service=processing_service,
+    )
+
+    service.delete_document(
+        document_id=document_id,
+        user_id=current_user.id,
+    )
+
+    return None
 @router.get("/{document_id}/test-processing")
 def test_processing(
     document_id: UUID,
